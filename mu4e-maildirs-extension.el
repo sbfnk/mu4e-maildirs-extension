@@ -173,7 +173,8 @@ Insert the parent maildir name if ITEM has a different one from PREV."
   "Clear cache and insert maildirs summary."
   (interactive)
   (mu4e-message "Updating index & cache...")
-  (mu4e-update-index))
+  (mu4e-update-index)
+  (mu4e-message "...index updated"))
 
 ;;;###autoload
 (defun mu4e-maildirs-extension ()
