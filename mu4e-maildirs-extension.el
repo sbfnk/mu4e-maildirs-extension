@@ -292,6 +292,7 @@ clicked."
   (interactive)
   (mu4e-message "Updating index & cache...")
   (mu4e-update-index)
+  (mu4e-maildirs-extension-index-updated-handler)
   (mu4e-message "...index updated"))
 
 ;;;###autoload
