@@ -98,11 +98,6 @@ Default dispays as '| maildir_name (unread/total)'."
   :group 'mu4e-maildirs-extension
   :type '(string))
 
-(defcustom mu4e-maildirs-extension-undefined-maildir-name "default account"
-  "The default account name if there is no specific directory."
-  :group 'mu4e-maildirs-extension
-  :type '(string))
-
 (defface mu4e-maildirs-extension-maildir-face
   '((t :inherit mu4e-header-face))
   "Face for a normal maildir."
@@ -162,10 +157,10 @@ Given PATH \"/foo/bar/alpha\" will return '(\"/foo\" \"/bar\")."
         (view-maildirs nil)
         (path-history nil))
 
-    (mapcar '(lambda (name)
+    (mapc #'(lambda (name)
                (let ((parents (mu4e-maildirs-extension-get-parents name))
                      (path nil))
-                 (mapcar '(lambda (parent-name)
+                 (mapc #'(lambda (parent-name)
                             (setq path (concat path "/" parent-name))
                             (unless (assoc path path-history)
                               (add-to-list 'view-maildirs (format "%s/*" path))))
@@ -178,7 +173,7 @@ Given PATH \"/foo/bar/alpha\" will return '(\"/foo\" \"/bar\")."
 (defun mu4e-maildirs-extension-fetch ()
   "Fetch maildirs data."
   (let ((data nil))
-    (mapcar
+    (mapc
      #'(lambda (maildir)
          (let ((item nil)
                (level (length (mu4e-maildirs-extension-get-parents maildir)))
@@ -231,6 +226,27 @@ Given PATH \"/foo/bar/alpha\" will return '(\"/foo\" \"/bar\")."
     (setq mu4e-maildirs-extension-cached-maildirs-data
           (mu4e-maildirs-extension-fetch))))
 
+(defun mu4e-maildirs-extension-action-str (str &optional func-or-shortcut)
+  "Custom action without using [.] in STR.
+If FUNC-OR-SHORTCUT is non-nil and if it is a function, call it
+when STR is clicked (using RET or mouse-2); if FUNC-OR-SHORTCUT is
+a string, execute the corresponding keyboard action when it is
+clicked."
+  (let ((newstr str)
+        (map (make-sparse-keymap))
+        (func (if (functionp func-or-shortcut)
+                  func-or-shortcut
+                (if (stringp func-or-shortcut)
+                    (lexical-let ((macro func-or-shortcut))
+                      (lambda()(interactive)
+                        (execute-kbd-macro macro)))))))
+    (define-key map [mouse-2] func)
+    (define-key map (kbd "RET") func)
+    (put-text-property 0 (length newstr) 'keymap map newstr)
+    (put-text-property (string-match "[^\n\t\s-].+$" newstr)
+      (- (length newstr) 1) 'mouse-face 'highlight newstr)
+    newstr))
+
 (defun mu4e-maildirs-extension-update ()
   "Insert maildirs summary in `mu4e-main-view'."
   (mu4e-maildirs-extension-fetch-maybe)
@@ -260,12 +276,12 @@ Given PATH \"/foo/bar/alpha\" will return '(\"/foo\" \"/bar\")."
           mu4e-maildirs-extension-action-key
           'mu4e-maildirs-extension-force-update)
 
-        (mapcar #'(lambda (item)
-                    (insert
-                     (mu4e~main-action-str (funcall mu4e-maildirs-extension-propertize-func item)
-                                           `(lambda ()
-                                              (interactive)
-                                              (mu4e~headers-jump-to-maildir ,(plist-get item :path))))))
+        (mapc #'(lambda (item)
+                    (insert (mu4e-maildirs-extension-action-str
+                             (funcall mu4e-maildirs-extension-propertize-func item)
+                             `(lambda ()
+                                (interactive)
+                                (mu4e~headers-jump-to-maildir ,(plist-get item :path))))))
                 maildirs)
 
         (setq mu4e-maildirs-extension-end-point (point))
